@@ -1,0 +1,44 @@
+name: Continuous Integration
+
+on:
+  push:
+
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [macos, ubuntu, windows]
+
+        type: [shared, static]
+
+        include:
+        - { type: shared, shared: YES }
+        - { type: static, shared: NO }
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: matrix.os == 'windows'
+
+    - name: Install Dependencies
+      run: vcpkg install googletest
+
+    - name: Configure
+      run: cmake -B build -S .
+        -D BUILD_SHARED_LIBS=${{ matrix.shared }}
+
+    - name: Build
+      run: cmake --build build --config Release -j 2
+
+    - name: Install
+      run: cmake --install build --config Release --prefix prefix
+
+    - name: Test
+      run: cmake --build build --config Release --target test
